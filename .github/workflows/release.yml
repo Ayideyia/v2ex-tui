@@ -45,7 +45,10 @@ jobs:
           git tag "${{ steps.version.outputs.tag }}"
           git push origin HEAD "${{ steps.version.outputs.tag }}"
 
+      - name: Pack
+        run: mv "$(npm pack --ignore-scripts --silent)" v2ex-tui.tgz
+
       - name: Create GitHub release
-        run: gh release create "${{ steps.version.outputs.tag }}" dist/v2ex.js --generate-notes
+        run: gh release create "${{ steps.version.outputs.tag }}" v2ex-tui.tgz dist/v2ex.js --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}

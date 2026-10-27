@@ -5,11 +5,11 @@
 ## 🚀 安装
 
 ```bash
-npm i -g github:Ayideyia/v2ex-tui
+npm i -g https://github.com/Ayideyia/v2ex-tui/releases/latest/download/v2ex-tui.tgz
 v2ex
 ```
 
-装好后用 `v2ex`（或 `v2ex-tui`）启动，只需要 Node.js 18+。想固定某个版本可以在后面加 tag，例如 `github:Ayideyia/v2ex-tui#v1.0.0`；更新时重新执行一遍安装命令即可。
+装好后用 `v2ex`（或 `v2ex-tui`）启动，只需要 Node.js 18+。更新时重新执行一遍安装命令即可；想装指定版本，把 `latest/download` 换成 `download/v1.0.1` 这样的版本号。
 
 不想安装也可以直接运行：
 
