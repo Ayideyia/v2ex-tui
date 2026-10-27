@@ -33,8 +33,7 @@
     "watch": "node scripts/build.mjs --watch --no-minify",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test test/*.test.ts test/*.test.tsx",
-    "start": "node dist/v2ex.js",
-    "prepare": "node scripts/build.mjs"
+    "start": "node dist/v2ex.js"
   },
   "devDependencies": {
     "@types/node": "^18.19.130",

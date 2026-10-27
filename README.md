@@ -2,21 +2,27 @@
 
 终端里的 V2EX 客户端（TUI）。Node.js + TypeScript + [Ink](https://github.com/vadimdemedes/ink)（React for CLI）开发，用 esbuild 打包成**单个 JS 文件**，不需要 `node_modules`，`node v2ex.js` 即可运行。
 
-## 🚀 一行命令运行
+## 🚀 安装
+
+```bash
+npm i -g github:Ayideyia/v2ex-tui
+v2ex
+```
+
+装好后用 `v2ex`（或 `v2ex-tui`）启动，只需要 Node.js 18+。想固定某个版本可以在后面加 tag，例如 `github:Ayideyia/v2ex-tui#v1.0.0`；更新时重新执行一遍安装命令即可。
+
+不想安装也可以直接运行：
 
 ```bash
 npx github:Ayideyia/v2ex-tui
 ```
 
-> 只需要 Node.js 18+，不用 clone、不用手动装依赖。第一次运行会自动下载并打包，稍等片刻；之后会走 npx 缓存。
->
-> 带参数：`npx github:Ayideyia/v2ex-tui --node programmer`
-
 ## 从源码运行
 
 ```bash
 git clone https://github.com/Ayideyia/v2ex-tui.git && cd v2ex-tui
-npm install   # 会自动打包出 dist/v2ex.js
+npm install
+npm run build   # 打包出 dist/v2ex.js
 node dist/v2ex.js
 ```
 
