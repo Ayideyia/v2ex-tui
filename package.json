@@ -2,6 +2,30 @@
   "name": "v2ex-tui",
   "version": "1.0.0",
   "description": "V2EX 终端客户端 (TUI)",
+  "keywords": [
+    "v2ex",
+    "tui",
+    "cli",
+    "terminal"
+  ],
+  "homepage": "https://github.com/Ayideyia/v2ex-tui#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ayideyia/v2ex-tui.git"
+  },
+  "license": "MIT",
+  "author": "",
+  "type": "commonjs",
+  "bin": {
+    "v2ex": "dist/v2ex.js",
+    "v2ex-tui": "dist/v2ex.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "tsx src/index.tsx",
     "build": "node scripts/build.mjs",
@@ -9,34 +33,17 @@
     "watch": "node scripts/build.mjs --watch --no-minify",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test test/*.test.ts test/*.test.tsx",
-    "start": "node dist/v2ex.js"
-  },
-  "keywords": [
-    "v2ex",
-    "tui",
-    "cli",
-    "terminal"
-  ],
-  "author": "",
-  "license": "MIT",
-  "type": "commonjs",
-  "dependencies": {
-    "ink": "^3.2.0",
-    "react": "^17.0.2",
-    "undici": "^6.29.1"
+    "start": "node dist/v2ex.js",
+    "prepare": "node scripts/build.mjs"
   },
   "devDependencies": {
     "@types/node": "^18.19.130",
     "@types/react": "^17.0.93",
     "esbuild": "^0.28.2",
+    "ink": "^3.2.0",
+    "react": "^17.0.2",
     "tsx": "^4.23.15",
-    "typescript": "^5.9.3"
-  },
-  "private": true,
-  "bin": {
-    "v2ex": "dist/v2ex.js"
-  },
-  "engines": {
-    "node": ">=18"
+    "typescript": "^5.9.3",
+    "undici": "^6.29.1"
   }
 }
