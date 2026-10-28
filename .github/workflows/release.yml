@@ -1,6 +1,10 @@
 name: Release
 
 on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
   workflow_dispatch:
     inputs:
       bump:
@@ -12,8 +16,14 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   release:
+    # skip the release commit pushed by this workflow itself
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,7 +41,7 @@ jobs:
       - name: Bump version
         id: version
         run: |
-          npm version ${{ inputs.bump }} --no-git-tag-version
+          npm version ${{ inputs.bump || 'patch' }} --no-git-tag-version
           echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
       - run: npm run build
