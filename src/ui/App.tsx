@@ -58,6 +58,9 @@ export interface AppProps {
   mouse?: boolean;
 }
 
+/** Keys arriving this soon after a right-click are treated as the terminal's right-click paste. */
+const RIGHT_CLICK_PASTE_MS = 300;
+
 export function App({ client, initialNode, mouse = true }: AppProps) {
   const { exit } = useApp();
   const { columns, rows } = useTerminalSize();
@@ -85,6 +88,7 @@ export function App({ client, initialNode, mouse = true }: AppProps) {
   const topicKeys = useRef<KeyHandler | null>(null);
   const pickerKeys = useRef<((k: KeyPress) => void) | null>(null);
   const lastClick = useRef<{ at: number; index: number }>({ at: 0, index: -1 });
+  const lastRightClick = useRef(0);
 
   const stack = stacks[tab];
   const top = stack[stack.length - 1]!;
@@ -282,7 +286,14 @@ export function App({ client, initialNode, mouse = true }: AppProps) {
 
   function handleKey(k: KeyPress) {
     if (k.ctrl && k.input === 'c') return exit();
-    if (k.mouse) return handleMouse(k.mouse);
+    if (k.mouse) {
+      if (k.mouse.button === 2 && !k.mouse.wheel) lastRightClick.current = Date.now();
+      return handleMouse(k.mouse);
+    }
+    // Many terminals also paste the clipboard on right-click, and without bracketed paste
+    // (e.g. classic Windows consoles) it arrives as plain keystrokes. Drop keys that follow
+    // a right-click so they cannot act as hotkeys (e.g. "h" going back to the node picker).
+    if (Date.now() - lastRightClick.current < RIGHT_CLICK_PASTE_MS) return;
     if (top.kind === 'picker' && !help) {
       // the picker owns the keyboard (letters go into the filter)
       pickerKeys.current?.(k);

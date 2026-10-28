@@ -136,6 +136,7 @@ test('mouse: tabs, list click/double click, wheel, right-click back, picker clic
   await send('\x1b[<64;10;10M');
   assert.match(frame(), /▶\s+1\. 热门主题一/);
   // picker: mouse events must not leak into filter text; click a row then click again to pick
+  await tick(350); // keys right after a right-click are dropped as a possible paste
   await send('/');
   // grid at 100 cols: 5 columns x 19 wide; x=30 is column 2 -> node #2 (节点1), go is #1
   await send('\x1b[<0;30;5M\x1b[<0;30;5m\x1b[I\x1b[O');
@@ -157,6 +158,7 @@ test('right-click paste in a topic never triggers hotkeys or switches to 节点'
   assert.doesNotMatch(frame(), /选择节点/);
   assert.match(frame(), /热门主题二/);
   // a paste split across chunks is still treated as one paste
+  await tick(350);
   await send('\x1b[<0;10;4M');
   assert.match(frame(), /主题 #2/);
   await send('\x1b[200~3 s/');
@@ -185,6 +187,25 @@ async function enterGoNode() {
   assert.match(ctx.frame(), new RegExp(`${name} 节点主题A`));
   return { ...ctx, selRow, name };
 }
+
+test('right-click paste without bracketed paste in a node topic: only goes back one level', async () => {
+  const { inst, send, frame, name } = await enterGoNode();
+  await send('\r'); // open the first topic of the node
+  assert.match(frame(), /主题 #10/);
+  // right-click press/release, then the clipboard as plain keystrokes in separate chunks
+  // ("h" used to go back once more to the node picker and the rest landed in its filter)
+  await send('\x1b[<2;10;10M');
+  await send('\x1b[<2;10;10m');
+  await send('hello');
+  await send('https://www.v2ex.com/t/1');
+  assert.match(frame(), new RegExp(`${name} 节点主题A`));
+  assert.doesNotMatch(frame(), /选择节点/);
+  // normal keys work again once the paste window is over
+  await tick(350);
+  await send('h');
+  assert.match(frame(), /选择节点 › n13 /);
+  inst.unmount();
+});
 
 test('back from a node: Esc returns to the picker with filter + selection kept', async () => {
   const { inst, send, frame, selRow, name } = await enterGoNode();
@@ -250,6 +271,7 @@ test('back from a node: right-click, [‹ 返回] click, win32-input Esc and Bac
   const isPickerWithGo = (f: string) => /选择节点 › n13 /.test(f) && f.includes(selRow);
   await send('\x1b[<2;10;6M'); // right click
   assert.ok(isPickerWithGo(frame()), frame());
+  await tick(350); // keys right after a right-click are dropped as a possible paste
 
   await send('\r');
   const header = frame().split('\n')[0]!;
