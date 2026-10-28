@@ -146,6 +146,30 @@ test('mouse: tabs, list click/double click, wheel, right-click back, picker clic
   inst.unmount();
 });
 
+test('right-click paste in a topic never triggers hotkeys or switches to 节点', async () => {
+  const { inst, send, frame } = await setup();
+  await send('\x1b[<0;10;4M');
+  await send('\x1b[<0;10;4M');
+  assert.match(frame(), /主题 #2/);
+  // a terminal that pastes on right-click: the mouse report plus a bracketed paste of a URL
+  // ("s" in "https" used to open the node picker and the rest landed in its filter)
+  await send('\x1b[<2;10;10M\x1b[<2;10;10m\x1b[200~https://www.v2ex.com/t/1\x1b[201~');
+  assert.doesNotMatch(frame(), /选择节点/);
+  assert.match(frame(), /热门主题二/);
+  // a paste split across chunks is still treated as one paste
+  await send('\x1b[<0;10;4M');
+  assert.match(frame(), /主题 #2/);
+  await send('\x1b[200~3 s/');
+  await send('q?\x1b[201~');
+  assert.match(frame(), /主题 #2/);
+  assert.doesNotMatch(frame(), /选择节点/);
+  // in the picker a paste goes into the filter as text
+  await send('/');
+  await send('\x1b[200~n13\r\n\x1b[201~');
+  assert.match(frame(), /选择节点 › n13 /);
+  inst.unmount();
+});
+
 /** 3 -> filter "n13" -> move down twice -> Enter. Returns the picker frame's selected row to compare later. */
 async function enterGoNode() {
   const ctx = await setup();

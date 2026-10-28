@@ -26,8 +26,26 @@ test('win32-input-mode records decode to keys and key-ups are ignored', () => {
   assert.deepEqual(names(parseKeys('\x1b[16;42;0;1;16;1_')), []);
 });
 
-test('focus events, bracketed paste markers and unknown CSI never leak as text', () => {
-  assert.deepEqual(names(parseKeys('\x1b[I\x1b[O\x1b[200~go\x1b[201~\x1b[?1;2c\x1b[99x')), ['g', 'o']);
+test('focus events, stray paste markers and unknown CSI never leak as text', () => {
+  assert.deepEqual(names(parseKeys('\x1b[I\x1b[O\x1b[201~go\x1b[?1;2c\x1b[99x')), ['g', 'o']);
+});
+
+test('bracketed paste is one key, even when split across chunks or sent as win32 records', async () => {
+  const { resolveAction } = await import('../src/keybindings.js');
+  const ks = parseKeys('j\x1b[200~3 s/q\r\n\x1b[201~k');
+  assert.deepEqual(ks.map((k) => k.name ?? k.input), ['j', 'paste', 'k']);
+  assert.equal(ks[1]!.input, '3 s/q\n');
+  assert.equal(resolveAction(ks[1]!), undefined);
+  const p = new KeyParser();
+  assert.deepEqual(names(p.feed('\x1b[200~https://')), []);
+  assert.equal(p.hasPending, false); // no ESC timeout flush while a paste is open
+  const done = p.feed('www.v2ex.com\x1b[201~');
+  assert.equal(done.length, 1);
+  assert.equal(done[0]!.name, 'paste');
+  assert.equal(done[0]!.input, 'https://www.v2ex.com');
+  // body delivered as win32-input-mode records ('s' down/up)
+  const w = parseKeys('\x1b[200~\x1b[83;31;115;1;0;1_\x1b[83;31;115;0;0;1_\x1b[201~');
+  assert.deepEqual(w.map((k) => [k.name, k.input]), [['paste', 's']]);
 });
 
 test('SGR mouse: click, release, wheel, right click', () => {

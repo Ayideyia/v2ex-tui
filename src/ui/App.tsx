@@ -288,6 +288,8 @@ export function App({ client, initialNode, mouse = true }: AppProps) {
       pickerKeys.current?.(k);
       return;
     }
+    // pasted text only goes into the picker filter; anywhere else it is ignored
+    if (k.name === 'paste') return;
     const a = resolveAction(k);
     if (!a) return;
     if (a === 'quit') return exit();

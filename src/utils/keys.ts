@@ -3,14 +3,14 @@
  *
  * Handles: plain chars, control chars, CSI / SS3 sequences (arrows, PgUp/PgDn, Home/End, Shift-Tab),
  * Windows ConPTY "win32-input-mode" records (ESC [ Vk;Sc;Uc;Kd;Cs;Rc _), SGR (1006) and legacy X10
- * mouse reports, focus in/out, bracketed-paste markers, and CRLF Enter. Unknown sequences are dropped
- * (never leaked as text), and incomplete sequences at the end of a chunk are buffered until the next
- * chunk or a short timeout, so the parser can never wedge.
+ * mouse reports, focus in/out, bracketed paste (emitted as one 'paste' key), and CRLF Enter. Unknown
+ * sequences are dropped (never leaked as text), and incomplete sequences at the end of a chunk are
+ * buffered until the next chunk or a short timeout, so the parser can never wedge.
  */
 
 export type KeyName =
   | 'up' | 'down' | 'left' | 'right' | 'pageup' | 'pagedown' | 'home' | 'end'
-  | 'return' | 'escape' | 'tab' | 'backspace' | 'delete' | 'mouse';
+  | 'return' | 'escape' | 'tab' | 'backspace' | 'delete' | 'mouse' | 'paste';
 
 export interface MouseEvent {
   /** 0 left, 1 middle, 2 right, 3 release (X10) */
@@ -28,7 +28,7 @@ export interface MouseEvent {
 }
 
 export interface KeyPress {
-  /** printable character (or the letter for ctrl combos) */
+  /** printable character (or the letter for ctrl combos); the pasted text for 'paste' */
   input: string;
   name?: KeyName;
   ctrl: boolean;
@@ -50,6 +50,18 @@ const VK_KEYS: Record<number, KeyName> = {
 };
 
 const mk = (p: Partial<KeyPress>): KeyPress => ({ input: '', ctrl: false, meta: false, shift: false, ...p });
+
+const PASTE_START = '\x1b[200~';
+const PASTE_END = '\x1b[201~';
+/** Upper bound for buffering an unterminated bracketed paste across chunks. */
+const MAX_PASTE = 1 << 20;
+
+/** Decode the body of a bracketed paste (may itself be win32-input-mode records) to plain text. */
+function pasteText(raw: string): string {
+  return parseChunk(raw, true).keys
+    .map((k) => (k.name === 'return' ? '\n' : k.name === 'tab' ? '\t' : !k.name && !k.ctrl ? k.input : ''))
+    .join('');
+}
 
 /** Modifier param in CSI 1;<m>X form: 1 + (shift 1 | alt 2 | ctrl 4) */
 function applyMod(k: KeyPress, mod: number | undefined): KeyPress {
@@ -148,6 +160,20 @@ export function parseChunk(buf: string, final = true): ParseResult {
       continue;
     }
     const next = buf[i + 1]!;
+    if (buf.startsWith(PASTE_START, i)) {
+      // bracketed paste: deliver the whole text as one key so it can never trigger hotkeys
+      const start = i + PASTE_START.length;
+      const end = buf.indexOf(PASTE_END, start);
+      if (end < 0) {
+        if (!final) return { keys, rest: buf.slice(i) };
+        keys.push(mk({ name: 'paste', input: pasteText(buf.slice(start)) }));
+        i = n;
+        continue;
+      }
+      keys.push(mk({ name: 'paste', input: pasteText(buf.slice(start, end)) }));
+      i = end + PASTE_END.length;
+      continue;
+    }
     if (next === '[') {
       // legacy X10 mouse: ESC [ M b x y (3 raw bytes)
       if (buf[i + 2] === 'M' && (i + 3 >= n || !/[0-9;<]/.test(buf[i + 3]!))) {
@@ -210,7 +236,7 @@ function csiKey(params: string, final: string): KeyPress | undefined {
   if (final === 'I' || final === 'O') return undefined; // focus in / out
   if (final === '~') {
     const [code, mod] = params.split(';');
-    if (code === '200' || code === '201') return undefined; // bracketed paste markers
+    if (code === '200' || code === '201') return undefined; // stray bracketed paste marker
     const name = TILDE_KEYS[code ?? ''];
     return name ? applyMod(mk({ name }), mod ? Number(mod) : undefined) : undefined;
   }
@@ -232,13 +258,15 @@ export class KeyParser {
 
   feed(chunk: string): KeyPress[] {
     const { keys, rest } = parseChunk(this.pending + chunk, false);
-    // guard against unbounded buffering of junk
-    this.pending = rest.length > 64 ? '' : rest;
+    // guard against unbounded buffering of junk; an open paste waits for its end marker
+    const limit = rest.startsWith(PASTE_START) ? MAX_PASTE : 64;
+    this.pending = rest.length > limit ? '' : rest;
     return keys;
   }
 
+  /** True when buffered bytes should be flushed after a short timeout (not for an open paste). */
   get hasPending(): boolean {
-    return this.pending.length > 0;
+    return this.pending.length > 0 && !this.pending.startsWith(PASTE_START);
   }
 
   /** Flush whatever is buffered (e.g. a lone ESC after a timeout). */

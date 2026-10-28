@@ -137,6 +137,11 @@ export function NodePicker({ client, width, height, onSelect, onCancel, keyRef, 
       if (index === sel || dbl) return pick(index);
       return select(index);
     }
+    if (k.name === 'paste') {
+      const text = input.replace(/\s+/g, ' ').trim();
+      if (text) setQuery((q) => q + text);
+      return;
+    }
     if (k.name === 'escape') return onCancel();
     if (k.name === 'return') return pick(sel);
     if (k.name === 'up' || (k.ctrl && input === 'p')) return go('up');

@@ -67,13 +67,16 @@ function main() {
   // xterm SGR mouse: 1000 = press/release + wheel, 1006 = SGR extended coordinates
   const MOUSE_ON = '\x1b[?1000h\x1b[?1006h';
   const MOUSE_OFF = '\x1b[?1006l\x1b[?1002l\x1b[?1000l';
+  // bracketed paste, so pasted text (e.g. right-click paste) is never read as hotkeys
+  const PASTE_ON = '\x1b[?2004h';
+  const PASTE_OFF = '\x1b[?2004l';
   let restored = false;
   const restore = () => {
     if (restored) return;
     restored = true;
     try {
       // writeSync so it still reaches the terminal from 'exit' / crash handlers
-      writeSync(1, (config.mouse ? MOUSE_OFF : '') + '\x1b[?1049l\x1b[?25h');
+      writeSync(1, (config.mouse ? MOUSE_OFF : '') + PASTE_OFF + '\x1b[?1049l\x1b[?25h');
     } catch {
       /* terminal already gone */
     }
@@ -83,7 +86,7 @@ function main() {
       /* ignore */
     }
   };
-  process.stdout.write('\x1b[?1049h\x1b[H\x1b[2J\x1b[?25l' + (config.mouse ? MOUSE_ON : ''));
+  process.stdout.write('\x1b[?1049h\x1b[H\x1b[2J\x1b[?25l' + PASTE_ON + (config.mouse ? MOUSE_ON : ''));
   process.on('exit', restore);
   for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
     process.on(sig, () => { restore(); process.exit(128 + (sig === 'SIGINT' ? 2 : sig === 'SIGTERM' ? 15 : 1)); });

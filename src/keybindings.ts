@@ -10,6 +10,8 @@ export type Action =
 /** Map a raw ink keypress to a semantic action. */
 export function resolveAction(k: KeyPress): Action | undefined {
   const { input } = k;
+  // pasted text is never a command
+  if (k.name === 'paste') return undefined;
   if (k.ctrl) {
     switch (input) {
       case 'c': return 'quit';
